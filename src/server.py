@@ -3,6 +3,7 @@ import socket # Cria sockets par comunicação em uma rede
 import queue # Fila para armazenar mensagens
 import threading # Cria threads, que são úteis para executar operações simultâneas
 import struct # Bilioteca que Interpreta bytes como dados binários compactados
+import datetime as dt # biblioteca pra manipular datas e horas
 from convert_txt import convert_string_to_txt
 
 # Inicialia fila para armazenar mensagens a serem processadas
@@ -15,6 +16,10 @@ clients_nickname = []
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Atribuição para porta 9999
 server.bind(("localhost", 9999))
+
+# Função responsável por retornar a data e hora atual no formato solicitado
+def get_current_time_and_date():
+  return dt.datetime.now().strftime("%H:%M:%S %d/%m/%Y ")
 
 # Função para receber mensagens dos clientes
 def receive():
@@ -94,7 +99,7 @@ def broadcast():
             message_bytes, address_ip_client = messages.get()
 
             # Converte a sequência de bytes da mensagem recebida em uma string    
-            decoded_message = message_bytes.decode() 
+            decoded_message = message_bytes.decode(encoding = "ISO-8859-1") 
 
              #verificando se o cliente já está na lista de clientes
             if address_ip_client not in clients_ip:
@@ -118,8 +123,13 @@ def broadcast():
                         # Envia mensagem de notificação de saida do cliente
                         server.sendto(f"{nickname} saiu da sala!".encode(), client_ip)
                     else:
+                        ip = address_ip_client[0]
+                        port = address_ip_client[1]
+                        # Formatando mensagem para exibição
+                        message_output = f'{ip}:{port}/~{decoded_message} {get_current_time_and_date()}'
+
                         # Envia a mensagem para todos os clientes
-                        server.sendto(message_bytes, client_ip)
+                        server.sendto(message_output.encode(encoding = 'ISO-8859-1'), client_ip)
 
                 except:
                     # Remove o cliente da lista se ocorrer um erro ao enviar a mensagem

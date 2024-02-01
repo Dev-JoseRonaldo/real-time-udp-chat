@@ -12,8 +12,18 @@ client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Atribuição de uma porta aleatória entre 1000 e 9998
 client.bind(("localhost", random.randint(1000, 9998)))
 
-# Solicita que o usuário informe um nickname
-nickname = input(f"Digite seu nickname: ")
+# Função responsável por imprimir os comandos disponíveis
+def print_commands():
+  header = ['Funcionalidade', 'Comando']
+  conect_command = ['Conectar à sala', 'hi, meu nome eh <nome_do_usuario>']
+  quit_command = ['Sair da sala', 'bye']
+
+  print('---------------------------------------------------------------------')
+  print('{:^12} {:>20}'.format(*header))
+  print('---------------------------------------------------------------------')
+  print('{:^12} {:>45}\n'.format(*conect_command))
+  print('{:^12} {:>18}'.format(*quit_command))
+  print('---------------------------------------------------------------------\n')
 
 # Função para receber mensagens
 def receive():
@@ -34,17 +44,41 @@ def receive():
 receive_thread = threading.Thread(target=receive)
 receive_thread.start()
 
-# Envia uma mensagem de inscrição com o nickname escolhido para o servidor
-client.sendto(f"SIGNUP_TAG:{nickname}".encode(), (client.getsockname()[0], 9999))
+print_commands()
+is_conected = False
 
 # Loop principal para envio de mensagens
 while True:
     # Solicita ao usuário para inserir uma mensagem
     message = input()
-    if message == "bye":
-        client.sendto(f"QUIT_TAG:{nickname}".encode(), (client.getsockname()[0], 9999))
-        exit()
-    else:
+
+    # Verifica se a mensagem inserida é um o comando para entrar na sala
+    if message.startswith("hi, meu nome eh "):
+        # Se já estiver conectado exibi mensagem de que já está conectado
+        if is_conected:
+            print("Você já está conectado à sala!")
+
+        # Caso não esteja conectado, conecta à sala
+        else:
+            nickname = message[16:]
+            is_conected = True
+            # Envia uma mensagem de inscrição com o nickname escolhido para o servidor
+            client.sendto(f"SIGNUP_TAG:{nickname}".encode(), (client.getsockname()[0], 9999))
+
+    # Caso seja o comando de sair da sala
+    elif message == "bye":
+        # Se não estiver conectado exibi mensagem de que não está conectado
+        if not is_conected:
+            print("Você não está conectado à sala!")
+
+        # Caso esteja conectado, sai da sala
+        else:
+            client.sendto(f"QUIT_TAG:{nickname}".encode(), (client.getsockname()[0], 9999))
+            is_conected = False
+            print_commands()
+
+    # Se estiver conectado e a mensagem não for um comando, envia essa mensagem para o servidor
+    elif is_conected:
         # Converte a mensagem em um arquivo txt
         path_file = convert_string_to_txt(nickname, message)
         # Lendo o conteudo do arquivo
@@ -66,3 +100,7 @@ while True:
             client.sendto(header + bytearray(data), ("localhost", 9999))   # Envia o fragmento (header + data) para o servidor
             contents = contents[fragSize:] # Remove o fragmento enviado do conteúdo
             fragIndex += 1 # Incrementa o índice do fragmento
+
+    # Caso não esteja conectado e a mensagem não seja um comando, exibe mensagem de comando inválido
+    else:
+        print("Comando inválido!")
