@@ -28,10 +28,12 @@ def receive():
             # Recebe mensagens em bytes e o endereço IP + porta do cliente do socket do servidor
             message_received_bytes, address_ip_client = server.recvfrom(1024)
 
-            # Coloca a mensagem recebida e o endereço IP do cliente na fila para processamento, caso a mensagem tenha a tag de SIGNUP
-            if message_received_bytes.decode().startswith("SIGNUP_TAG:"):
-                messages.put((message_received_bytes, address_ip_client))           
-            # Caso a mensagem não tenha a tag de MESSAGE, força erro para cair no except
+            # Coloca a mensagem recebida e o endereço IP do cliente na fila para processamento, 
+            # Caso a mensagem tenha a tag de SIGNUP_TAG ou QUIT_TAG
+            if (message_received_bytes.decode().startswith("SIGNUP_TAG:") or
+                message_received_bytes.decode().startswith("QUIT_TAG:")):
+                messages.put((message_received_bytes, address_ip_client))                   
+            # Caso contrário, força erro para cair no except
             else:
                 raise NameError('MESSAGE_TAG')
 
@@ -108,9 +110,17 @@ def broadcast():
 
                         # Envia mensagem de notificação de entrada do novo cliente
                         server.sendto(f"{nickname} se juntou ".encode(), client_ip)
+
+                    elif decoded_message.startswith("QUIT_TAG:"): # Verifica se a mensagem é uma mensagem de inscrição
+                        # Decodifica mensagem para saber nickname do usuário
+                        nickname = decoded_message[decoded_message.index(":")+1:]
+
+                        # Envia mensagem de notificação de saida do cliente
+                        server.sendto(f"{nickname} saiu da sala!".encode(), client_ip)
                     else:
                         # Envia a mensagem para todos os clientes
                         server.sendto(message_bytes, client_ip)
+
                 except:
                     # Remove o cliente da lista se ocorrer um erro ao enviar a mensagem
                     index_client = clients_ip.index(client_ip)

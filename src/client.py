@@ -42,6 +42,7 @@ while True:
     # Solicita ao usuário para inserir uma mensagem
     message = input()
     if message == "bye":
+        client.sendto(f"QUIT_TAG:{nickname}".encode(), (client.getsockname()[0], 9999))
         exit()
     else:
         # Converte a mensagem em um arquivo txt
