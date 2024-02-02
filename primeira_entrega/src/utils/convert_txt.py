@@ -8,9 +8,9 @@ def convert_string_to_txt(user, string, serverSide=False):
 
     #flag para modificar o caminho do arquivo caso seja gerado pelo servidor
     if serverSide:
-        path_file = f"./data/server/{file_name}.txt"
+        path_file = f"./primeira_entrega/data/server/{file_name}.txt"
     else:
-        path_file = f"./data/client/{file_name}.txt"
+        path_file = f"./primeira_entrega/data/client/{file_name}.txt"
 
     #salvando string em arquivo .txt
     file = open(path_file, "a")

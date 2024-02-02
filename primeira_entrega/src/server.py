@@ -3,8 +3,10 @@ import socket # Cria sockets par comunicação em uma rede
 import queue # Fila para armazenar mensagens
 import threading # Cria threads, que são úteis para executar operações simultâneas
 import struct # Bilioteca que Interpreta bytes como dados binários compactados
-import datetime as dt # biblioteca pra manipular datas e horas
-from convert_txt import convert_string_to_txt
+
+from utils.convert_txt import convert_string_to_txt
+import utils.constants as c
+from utils.get_current_time_and_date import get_current_time_and_date
 
 # Inicialia fila para armazenar mensagens a serem processadas
 messages = queue.Queue()
@@ -14,12 +16,14 @@ clients_nickname = []
 
 # Criação do socket UDP
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# Atribuição para porta 9999
-server.bind(("localhost", 9999))
+# Atribuição do endereço do servidor
+server.bind(c.SERVER_ADRR)
 
-# Função responsável por retornar a data e hora atual no formato solicitado
-def get_current_time_and_date():
-  return dt.datetime.now().strftime("%H:%M:%S %d/%m/%Y ")
+#Função responsável por remover um client de clients_ip e clients_nickname
+def remove_client(client): 
+    index_client = clients_ip.index(client)
+    clients_ip.remove(client)
+    clients_nickname.pop(index_client)
 
 # Função para receber mensagens dos clientes
 def receive():
@@ -31,7 +35,7 @@ def receive():
     while True:
         try:
             # Recebe mensagens em bytes e o endereço IP + porta do cliente do socket do servidor
-            message_received_bytes, address_ip_client = server.recvfrom(1024)
+            message_received_bytes, address_ip_client = server.recvfrom(c.BUFF_SIZE)
 
             # Coloca a mensagem recebida e o endereço IP do cliente na fila para processamento, 
             # Caso a mensagem tenha a tag de SIGNUP_TAG ou QUIT_TAG
@@ -120,6 +124,9 @@ def broadcast():
                         # Decodifica mensagem para saber nickname do usuário
                         nickname = decoded_message[decoded_message.index(":")+1:]
 
+                        # Remove o cliente das listas clients_ip e clients_nickname
+                        remove_client(client_ip)
+                        
                         # Envia mensagem de notificação de saida do cliente
                         server.sendto(f"{nickname} saiu da sala!".encode(), client_ip)
                     else:
@@ -133,9 +140,7 @@ def broadcast():
 
                 except:
                     # Remove o cliente da lista se ocorrer um erro ao enviar a mensagem
-                    index_client = clients_ip.index(client_ip)
-                    clients_ip.remove(client_ip)
-                    clients_nickname.pop(index_client)
+                    remove_client(client_ip)
 
 # Inicia uma thread para as funções de recebimento e transmissão
 receive_tread = threading.Thread(target=receive)
