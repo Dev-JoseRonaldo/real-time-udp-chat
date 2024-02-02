@@ -5,32 +5,22 @@ import threading # Cria threads, que são úteis para executar operações simul
 import math # Biblioteca de funções matemáticas
 import struct # Bilioteca que Interpreta bytes como dados binários compactados
 from zlib import crc32 # Calcula uma soma de verificação CRC 32 bits
-from convert_txt import convert_string_to_txt
+
+from utils.convert_txt import convert_string_to_txt
+import utils.constants as c
+from utils.print_commands import print_commands
 
 # Criação do socket UDP
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Atribuição de uma porta aleatória entre 1000 e 9998
-client.bind(("localhost", random.randint(1000, 9998)))
-
-# Função responsável por imprimir os comandos disponíveis
-def print_commands():
-  header = ['Funcionalidade', 'Comando']
-  conect_command = ['Conectar à sala', 'hi, meu nome eh <nome_do_usuario>']
-  quit_command = ['Sair da sala', 'bye']
-
-  print('---------------------------------------------------------------------')
-  print('{:^12} {:>20}'.format(*header))
-  print('---------------------------------------------------------------------')
-  print('{:^12} {:>45}\n'.format(*conect_command))
-  print('{:^12} {:>18}'.format(*quit_command))
-  print('---------------------------------------------------------------------\n')
+client.bind((c.SERVER_ADRR[0], random.randint(1000, 9998)))
 
 # Função para receber mensagens
 def receive():
     while True:
         try:
             # Recebe mensagens do servidor
-            message, _ = client.recvfrom(1024)
+            message, _ = client.recvfrom(c.BUFF_SIZE)
 
             # Converte a sequência de bytes da mensagem recebida em uma string
             decoded_message = message.decode() 
@@ -47,10 +37,19 @@ receive_thread.start()
 print_commands()
 is_conected = False
 
+# Função responsável por criar um fragmento
+def create_fragment(contents, fragSize, fragIndex, fragCount):
+    data = bytearray() # Estrtura de dados do tipo bytearray
+    data.extend(contents[:fragSize]) # Pegando um fragmento de tamanho fragSize
+    crc = crc32(data) # gerando uma soma de verificação CRC (pode ser útil para a etapa 2 do projeto)
+    header = struct.pack('!IIII', fragSize, fragIndex, fragCount, crc) # Header compactado
+    return header + bytearray(data)
+
 # Loop principal para envio de mensagens
 while True:
     # Solicita ao usuário para inserir uma mensagem
     message = input()
+    client_ip = client.getsockname()[0]
 
     # Verifica se a mensagem inserida é um o comando para entrar na sala
     if message.startswith("hi, meu nome eh "):
@@ -63,7 +62,7 @@ while True:
             nickname = message[16:]
             is_conected = True
             # Envia uma mensagem de inscrição com o nickname escolhido para o servidor
-            client.sendto(f"SIGNUP_TAG:{nickname}".encode(), (client.getsockname()[0], 9999))
+            client.sendto(f"SIGNUP_TAG:{nickname}".encode(), (client_ip, 9999))
 
     # Caso seja o comando de sair da sala
     elif message == "bye":
@@ -73,7 +72,7 @@ while True:
 
         # Caso esteja conectado, sai da sala
         else:
-            client.sendto(f"QUIT_TAG:{nickname}".encode(), (client.getsockname()[0], 9999))
+            client.sendto(f"QUIT_TAG:{nickname}".encode(), (client_ip, 9999))
             is_conected = False
             print_commands()
 
@@ -87,17 +86,14 @@ while True:
 
         #fragmentando o arquivo em diversas partes
         fragIndex = 0 # Indice do fragmento
-        fragSize = 8 # Tamanaho do fragmento
+        fragSize = 8 # Tamanho do fragmento (setado em 8 para facilitar os testes, mas o o correto seria => tamanho do buffer(1024) - tamanho do header(16))
         fragCount = math.ceil(len(contents) / fragSize) # Quantidade total de fragmentos
 
         # Envia os fragmentos para o servidor
         while contents:
-            data = bytearray() # Estrtura de dados do tipo bytearray
-            data.extend(contents[:fragSize]) # Pegando um fragmento de tamanho fragSize
-            crc = crc32(data) # gerando uma soma de verificação CRC (pode ser útil para a etapa 2 do projeto)
-            header = struct.pack('!IIII', fragSize, fragIndex, fragCount, crc) # Header compactado
+            fragment = create_fragment(contents, fragSize, fragIndex, fragCount)
 
-            client.sendto(header + bytearray(data), ("localhost", 9999))   # Envia o fragmento (header + data) para o servidor
+            client.sendto(fragment, c.SERVER_ADRR)   # Envia o fragmento (header + data) para o servidor
             contents = contents[fragSize:] # Remove o fragmento enviado do conteúdo
             fragIndex += 1 # Incrementa o índice do fragmento
 

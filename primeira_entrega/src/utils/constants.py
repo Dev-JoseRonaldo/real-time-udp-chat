@@ -1,0 +1,3 @@
+BUFF_SIZE = 1024
+SERVER_ADRR = ("localhost", 9999)
+HEADER_SIZE = 16
