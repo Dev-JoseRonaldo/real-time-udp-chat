@@ -80,20 +80,16 @@ def receive():
                 #salvando o arquivo
                 content = b''.join(rec_list) # Juntando os fragmentos
                 content = content.decode(encoding = "ISO-8859-1") # Decodificando a mensagem
-                path_file = convert_string_to_txt(content, name, True) # Salvando em um arquivo
 
-                # lendo o conteudo do arquivo e preparando a mensagem para envio
-                with open(path_file, "r") as arquivo:
-                    received_text = arquivo.read()
-                    if received_text.startswith("hi, meu nome eh "):
-                        messages.put((message_received_bytes, address_ip_client))
-                    elif received_text.startswith("bye"):
-                        messages.put((message_received_bytes, address_ip_client))
-                    else:   
-                        message = f"{name}: {received_text}".encode()
+                if content.startswith("hi, meu nome eh "):
+                    messages.put((message_received_bytes, address_ip_client))
+                elif content.startswith("bye"):
+                    messages.put((message_received_bytes, address_ip_client))
+                else:   
+                    message = f"{name}: {content}".encode()
 
-                        # Salvando a mensagem na fila
-                        messages.put((message, address_ip_client))
+                    # Salvando a mensagem na fila
+                    messages.put((message, address_ip_client))
 
                 # resetando a lista de fragmentos
                 received_chunks = 0
@@ -119,14 +115,19 @@ def broadcast():
              # Verificando se o cliente já está na lista de clientes
             if address_ip_client not in clients_ip:
                 name = decoded_message.split("eh ")[1]
+                nickname = name
                 clients_ip.append(address_ip_client)
                 clients_nickname.append(name)
+
+            else:
+                index = clients_ip.index(address_ip_client)
+                nickname = clients_nickname[index]
 
             for client_ip in clients_ip: # Envia a mensagem recebida para todos os clientes conectados
                 try:
                     if decoded_message.startswith("hi, meu nome eh "): # Verifica se a mensagem é uma mensagem de inscrição
                         # Decodifica mensagem para saber nickname do usuário
-                        nickname = decoded_message[decoded_message.index("eh ")+3:]
+                        nickname = decoded_message.split("eh ")[1]
 
                         # Envia mensagem de notificação de entrada do novo cliente
                         send_packet(f"{nickname} se juntou", server, client_ip, None, nickname, True)

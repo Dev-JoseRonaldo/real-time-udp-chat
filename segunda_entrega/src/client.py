@@ -9,7 +9,6 @@ from zlib import crc32 # Calcula uma soma de verificação CRC 32 bits
 from utils.send_packet import send_packet
 import utils.constants as c
 from utils.print_commands import print_commands
-from utils.update_dict_file_counter import client_dict_file_counter, server_dict_file_counter, remove_user_files
 
 # Criação do socket UDP
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -23,7 +22,6 @@ client.bind((c.SERVER_ADRR[0], CLIENT_ADRR))
 
 # Função para receber mensagens
 def receive():
-    global client_dict_file_counter, server_dict_file_counter
     while True:
         message_received_bytes, _ = client.recvfrom(c.BUFF_SIZE)
 
@@ -41,11 +39,6 @@ def receive():
         else:
             decoded_message = message_received_bytes.decode()
             print(decoded_message)
-
-            if decoded_message == (f"{nickname} saiu da sala!"):
-                # Remove arquivos do chat do usuário 
-                remove_user_files(client_dict_file_counter, nickname, 'client')
-                remove_user_files(server_dict_file_counter, nickname, 'server')
 
 # Inicia uma thread para a função receive
 receive_thread = threading.Thread(target=receive)
@@ -83,7 +76,6 @@ while True:
         else:
             send_packet(message, client, 9999, client_ip, nickname)
             is_conected = False
-            print_commands()
 
     # Se estiver conectado e a mensagem não for um comando, envia essa mensagem para o servidor
     elif is_conected:
