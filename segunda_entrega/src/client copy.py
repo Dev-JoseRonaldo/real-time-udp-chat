@@ -42,10 +42,10 @@ def receive():
             decoded_message = message_received_bytes.decode()
             print(decoded_message)
 
-            if decoded_message == (f"{nickname} saiu da sala!"):
+            #if decoded_message == (f"{nickname} saiu da sala!"):
                 # Remove arquivos do chat do usuário 
-                remove_user_files(client_dict_file_counter, nickname, 'client')
-                remove_user_files(server_dict_file_counter, nickname, 'server')
+                #remove_user_files(client_dict_file_counter, nickname, 'client')
+                #remove_user_files(server_dict_file_counter, nickname, 'server')
 
 # Inicia uma thread para a função receive
 receive_thread = threading.Thread(target=receive)
