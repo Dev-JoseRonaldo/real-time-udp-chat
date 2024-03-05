@@ -6,9 +6,10 @@ import math # Biblioteca de funções matemáticas
 import struct # Bilioteca que Interpreta bytes como dados binários compactados
 from zlib import crc32 # Calcula uma soma de verificação CRC 32 bits
 
-from utils.convert_txt import convert_string_to_txt
+from utils.send_packet import send_packet
 import utils.constants as c
 from utils.print_commands import print_commands
+
 # Criação do socket UDP
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Atribuição de uma porta aleatória entre 1000 e 9998
@@ -17,27 +18,27 @@ client.bind((c.SERVER_ADRR[0], CLIENT_ADRR))
 
 #fragSize = c.FRAG_SIZE
 
+#client.settimeout(2)
+
 # Função para receber mensagens
 def receive():
     while True:
-        try:
-            # Recebe mensagens do servidor
-            message, _ = client.recvfrom(c.BUFF_SIZE)
+        message_received_bytes, _ = client.recvfrom(c.BUFF_SIZE)
 
-            # Converte a sequência de bytes da mensagem recebida em uma string
-            decoded_message = message.decode() 
+        header = message_received_bytes[:16] # Separando o Header
+        message_received_bytes = message_received_bytes[16:] # Separando a mensagem
+        (fragSize, fragIndex, fragCount, checksum) = struct.unpack('!IIII', header) # Desempacotando o header
 
-            checksum = decoded_message.split(":")[0] # Armazena o checksum criado pelo remetente (servidor neste caso)
-            checksum_check = crc32((':'.join(decoded_message.split(":")[1:])).encode()) # Cria um checksum localmente(destinatário) para comparar com o checksum do remetente
+        header_no_checksum = struct.pack('!III', fragSize, fragIndex, fragCount) # Criando um header sem o checksum, para fazer a verificação de checksum depois
+        fragment_no_checksum = header_no_checksum + message_received_bytes # Criando um fragmento que o header não tem checksum, para comparar com o checksum que foi feito no remetente, pois lá não havia checksum no header quando o checksum foi calculado
 
-            if int(checksum_check) != int(checksum): # Verifica se os checksum são diferentes
-                print("Houve corrupção no pacote!")
-            else: # Caso os checksums sejam iguais
-                print(':'.join(decoded_message.split(":")[1:])) # Exibe a mensagem decodificada
-        except:
-            pass
+        checksum_check = crc32(fragment_no_checksum) # Criando o checksum do lado do receptor(servidor neste caso), usando o CRC
 
-
+        if checksum != checksum_check: # Fazendo a verificação dos valores dos checksums
+            print("Houve corrupção no pacote!")
+        else:
+            decoded_message = message_received_bytes.decode()
+            print(decoded_message)
 
 # Inicia uma thread para a função receive
 receive_thread = threading.Thread(target=receive)
@@ -45,20 +46,6 @@ receive_thread.start()
 
 print_commands()
 is_conected = False
-
-# Função responsável por criar um fragmento
-def create_fragment(contents, fragSize, fragIndex, fragCount):
-    data = bytearray() # Estrtura de dados do tipo bytearray
-    data.extend(contents[:fragSize]) # Pegando um fragmento de tamanho fragSize
-    
-    header_checksumless = struct.pack('!III', fragSize, fragIndex, fragCount) # Header compactado sem o checksum
-    fragment_checksumless = header_checksumless + bytearray(data) # fragmento sem o checksum
-
-    checksum = crc32(fragment_checksumless) # Gerando uma soma de verificação CRC como checksum
-    header = struct.pack('!IIII', fragSize, fragIndex, fragCount, checksum) # Header compactado com checksum
-    fragment = header + bytearray(data) # Fragmento completo (com checksum)
-
-    return fragment
 
 # Loop principal para envio de mensagens
 while True:
@@ -76,8 +63,8 @@ while True:
         else:
             nickname = message[16:]
             is_conected = True
-            # Envia uma mensagem de inscrição com o nickname escolhido para o servidor
-            client.sendto(f"SIGNUP_TAG:{nickname}".encode(), (client_ip, 9999))
+            
+            send_packet(message, client, 9999, client_ip, nickname)
 
     # Caso seja o comando de sair da sala
     elif message == "bye":
@@ -87,30 +74,12 @@ while True:
 
         # Caso esteja conectado, sai da sala
         else:
-            client.sendto(f"QUIT_TAG:{nickname}".encode(), (client_ip, 9999))
+            send_packet(message, client, 9999, client_ip, nickname)
             is_conected = False
-            print_commands()
 
     # Se estiver conectado e a mensagem não for um comando, envia essa mensagem para o servidor
     elif is_conected:
-        # Converte a mensagem em um arquivo txt
-        path_file = convert_string_to_txt(nickname, message)
-        # Lendo o conteudo do arquivo
-        file = open(path_file,"rb")
-        contents = file.read()
-
-        #fragmentando o arquivo em diversas partes
-        fragIndex = 0 # Indice do fragmento
-        fragSize = 8 # Tamanho do fragmento (setado em 8 para facilitar os testes, mas o o correto seria => tamanho do buffer(1024) - tamanho do header(16))
-        fragCount = math.ceil(len(contents) / fragSize) # Quantidade total de fragmentos
-
-        # Envia os fragmentos para o servidor
-        while contents:
-            fragment = create_fragment(contents, fragSize, fragIndex, fragCount)
-
-            client.sendto(fragment, c.SERVER_ADRR)   # Envia o fragmento (header + data) para o servidor
-            contents = contents[fragSize:] # Remove o fragmento enviado do conteúdo
-            fragIndex += 1 # Incrementa o índice do fragmento
+        send_packet(message, client, 9999, client_ip, nickname)
 
     # Caso não esteja conectado e a mensagem não seja um comando, exibe mensagem de comando inválido
     else:
