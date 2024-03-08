@@ -5,7 +5,7 @@ from utils.update_dict_file_counter import client_dict_file_counter, server_dict
 def convert_string_to_txt(string, user, ServerSide = False):
     # Dicionário com contador de arquivos por usuário para salvar mensagens corretamente
     global client_dict_file_counter, server_dict_file_counter
-
+    
     # Atualiza no dicionário o usuário e número de arquivos do mesmo
     if ServerSide:
         dict_file_counter = update_dict_file_counter(server_dict_file_counter, user)

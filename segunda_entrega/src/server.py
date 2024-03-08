@@ -12,25 +12,26 @@ from utils.get_current_time_and_date import get_current_time_and_date
 
 # Inicialia fila para armazenar mensagens a serem processadas
 messages = queue.Queue()
-# Listas para armazenar endereços IP e nicknames  dos clientes conectados
+# Listas para armazenar endereços IP, nicknames, sequence number e acks dos clientes conectados
 clients_ip = []
 clients_nickname = []
+seq_and_ack_controler = []
 
 # Criação do socket UDP
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Atribuição do endereço do servidor
 server.bind(c.SERVER_ADRR)
 
-#server.settimeout(2)
-
 #Função responsável por remover um client de clients_ip e clients_nickname
 def remove_client(client): 
     index_client = clients_ip.index(client)
     clients_ip.remove(client)
     clients_nickname.pop(index_client)
+    seq_and_ack_controler.pop(index_client)
 
 # Função para receber mensagens dos clientes
 def receive():
+
     # Numero de fragmentos recebidos
     received_chunks = 0
     # Lista de fragmentos recebidos
@@ -40,115 +41,140 @@ def receive():
 
         message_received_bytes, address_ip_client = server.recvfrom(c.BUFF_SIZE)
 
-        header = message_received_bytes[:16] # Separando o Header
-        message_received_bytes = message_received_bytes[16:] # Separando a mensagem
+        header = message_received_bytes[:24] # Separando o Header
+        message_received_bytes = message_received_bytes[24:] # Separando a mensagem
 
-        (fragSize, fragIndex, fragCount, checksum) = struct.unpack('!IIII', header) # Desempacotando o header
+        (fragSize, fragIndex, fragCount, seq_num, ack_num, checksum) = struct.unpack('!IIIIII', header) # Desempacotando o header
 
-        header_no_checksum = struct.pack('!III', fragSize, fragIndex, fragCount) # Criando um header sem o checksum, para fazer a verificação de checksum depois
+        header_no_checksum = struct.pack('!IIIII', fragSize, fragIndex, fragCount, seq_num, ack_num) # Criando um header sem o checksum, para fazer a verificação de checksum depois
         fragment_no_checksum = header_no_checksum + message_received_bytes # Criando um fragmento que o header não tem checksum, para comparar com o checksum que foi feito no remetente, pois lá não havia checksum no header quando o checksum foi calculado
 
         checksum_check = crc32(fragment_no_checksum) # Criando o checksum do lado do receptor(servidor neste caso), usando o CRC
 
-        # Fazendo a verificação dos valores dos checksums
-        if checksum != checksum_check: 
-            print("Houve corrupção no pacote!")
-            # resetando a lista de fragmentos
-            received_chunks = 0
-            rec_list = []
-        else: 
-            # Adiciona fragCount posições vazias na lista de fragmentos recebidos
-            # Serve para salvar os fragmentos na ordem correta
-            if len(rec_list) < fragCount:
-                need_to_add = fragCount - len(rec_list)
-                rec_list.extend([''] * need_to_add)
+        # Converte a sequência de bytes da mensagem recebida em uma string    
+        decoded_message = message_received_bytes.decode(encoding="ISO-8859-1") 
 
-            # Adiciona o fragmento recebido na lista de fragmentos recebidos
-            rec_list[fragIndex] = message_received_bytes
-            received_chunks += 1
+        # Verificando se o cliente já está na lista de clientes
+        if address_ip_client not in clients_ip:
+            nickname = decoded_message.split("eh ")[1]
+            clients_ip.append(address_ip_client)
+            clients_nickname.append(nickname)
+            seq_and_ack_controler.append([0, 0])
+            index = clients_ip.index(address_ip_client)
+        else:
+            index = clients_ip.index(address_ip_client)
+            nickname = clients_nickname[index]
 
-            # Caso já tenha recebido todos os fragmentos
-            if received_chunks == fragCount:
-                # Achando o nome pelo ip
-                name = 'ServerLogin'
-                for ip in clients_ip:
-                    if ip == address_ip_client:
-                        index = clients_ip.index(ip)
-                        name = clients_nickname[index]
-                        break
+        current_seq_num = seq_and_ack_controler[index][0]
+        current_ack_num = seq_and_ack_controler[index][1]
+        
+        # Fazendo a verificação do checksum, sequence number e ack
+        if decoded_message: # Caso exista mensagem, irá conferir checksum e sequence number
+            message = ''
 
-                #salvando o arquivo
-                content = b''.join(rec_list) # Juntando os fragmentos
-                content = content.decode(encoding = "ISO-8859-1") # Decodificando a mensagem
+            if checksum != checksum_check or seq_num != current_ack_num: 
+                if checksum != checksum_check:
+                    print("Houve corrupção no pacote!")
 
-                if content.startswith("hi, meu nome eh "):
-                    messages.put((message_received_bytes, address_ip_client))
-                elif content.startswith("bye"):
-                    messages.put((message_received_bytes, address_ip_client))
-                else:   
-                    message = f"{name}: {content}".encode()
-
-                    # Salvando a mensagem na fila
-                    messages.put((message, address_ip_client))
+                if current_ack_num == 0:
+                    send_packet(message, server, address_ip_client, None, nickname, seq_num, 1)
+                else:
+                    send_packet(message, server, address_ip_client, None, nickname, seq_num, 0)
 
                 # resetando a lista de fragmentos
                 received_chunks = 0
                 rec_list = []
+            
+            else: # Enviará mensagem para usuários conectados e ack do pacote recebido para remetente do pacote
+                send_packet(message, server, address_ip_client, None, nickname, seq_num, current_ack_num)
+                
+                # Atualiza próximo ack a ser enviado
+                if current_ack_num == 0:
+                    seq_and_ack_controler[index][1] = 1
+                else:
+                    seq_and_ack_controler[index][1] = 0
+                
+                # Adiciona fragCount posições vazias na lista de fragmentos recebidos
+                # Serve para salvar os fragmentos na ordem correta
+                if len(rec_list) < fragCount:
+                    need_to_add = fragCount - len(rec_list)
+                    rec_list.extend([''] * need_to_add)
 
-            # Caso haja perda de pacotes, ou seja, não recebeu todos os fragmentos
-            elif (received_chunks < fragCount) and (fragIndex == fragCount - 1):
-                print("Houve perda de pacote!")
-                # resetando a lista de fragmentos
-                received_chunks = 0
-                rec_list = []
+                # Adiciona o fragmento recebido na lista de fragmentos recebidos
+                rec_list[fragIndex] = message_received_bytes
+                received_chunks += 1
+
+                # Caso já tenha recebido todos os fragmentos
+                if received_chunks == fragCount:
+                    #salvando o arquivo
+                    content = b''.join(rec_list) # Juntando os fragmentos
+                    content = content.decode(encoding = "ISO-8859-1") # Decodificando a mensagem
+
+                    if content.startswith("hi, meu nome eh "):
+                        messages.put((decoded_message, address_ip_client, nickname))
+                    elif content.startswith("bye"):
+                        messages.put((decoded_message, address_ip_client, nickname))
+                    else:   
+                        message = f"{nickname}: {content}"
+
+                        # Salvando a mensagem na fila
+                        messages.put((message, address_ip_client, nickname))
+
+                    # resetando a lista de fragmentos
+                    received_chunks = 0
+                    rec_list = []
+        else: # Caso não exista mensagem, irá conferir ack number
+            if checksum != checksum_check or ack_num != current_seq_num: # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
+                if checksum != checksum_check:
+                    print(f"Houve corrupção no pacote!")
+            else: # Recebe ack do pacote recebido e atualiza próximo número de sequência a ser enviado
+                if current_seq_num == 0:
+                    seq_and_ack_controler[index][0] = 1
+                elif current_seq_num == 1:
+                    seq_and_ack_controler[index][0] = 0
+           
+            server.settimeout(None)  # Define o timeout de volta para None para desabilitá-lo
+
 
 # Função para transmitir mensagens a todos os clientes
 def broadcast():
     while True:
         while not messages.empty(): # Caso exista mensagens na fila
             # Pega bytes e endereço IP do cliente da mensagem da fila 
-            message_bytes, address_ip_client = messages.get()
-
-            # Converte a sequência de bytes da mensagem recebida em uma string    
-            decoded_message = message_bytes.decode(encoding="ISO-8859-1") 
-
-             # Verificando se o cliente já está na lista de clientes
-            if address_ip_client not in clients_ip:
-                name = decoded_message.split("eh ")[1]
-                nickname = name
-                clients_ip.append(address_ip_client)
-                clients_nickname.append(name)
-
-            else:
-                index = clients_ip.index(address_ip_client)
-                nickname = clients_nickname[index]
+            decoded_message, address_ip_client, nickname = messages.get()
 
             for client_ip in clients_ip: # Envia a mensagem recebida para todos os clientes conectados
+
+                index = clients_ip.index(client_ip)
+                name = clients_nickname[index]
+                current_seq_num = seq_and_ack_controler[index][0]
+                current_ack_num = seq_and_ack_controler[index][1]
+
                 try:
                     if decoded_message.startswith("hi, meu nome eh "): # Verifica se a mensagem é uma mensagem de inscrição
-                        # Decodifica mensagem para saber nickname do usuário
-                        nickname = decoded_message.split("eh ")[1]
 
                         # Envia mensagem de notificação de entrada do novo cliente
-                        send_packet(f"{nickname} se juntou", server, client_ip, None, nickname, True)
+                        send_packet(f"{nickname} se juntou", server, client_ip, None, name, current_seq_num, current_ack_num)
 
                     elif decoded_message == "bye": # Verifica se a mensagem é uma mensagem de inscrição
-
-                        # Remove o cliente das listas clients_ip e clients_nickname
-                        remove_client(client_ip)
                         
                         # Envia mensagem de notificação de saida do cliente
-                        send_packet(f"{nickname} saiu da sala!", server, client_ip, None, nickname, True)
+                        send_packet(f"{nickname} saiu da sala!", server, client_ip, None, name, current_seq_num, current_ack_num)
+                        
                     else:
                         ip = address_ip_client[0]
                         port = address_ip_client[1]
                         # Formatando mensagem para exibição
                         message_output = f'{ip}:{port}/~{decoded_message} {get_current_time_and_date()}'
 
-                        send_packet(message_output, server, client_ip, None, nickname, True)
+                        send_packet(message_output, server, client_ip, None, name, current_seq_num, current_ack_num)
 
                 except Exception as e:
                     print(f"Erro ao enviar mensagem: {e}")
+
+            # Remove o cliente das listas clients_ip e clients_nickname
+            if decoded_message == "bye":
+                remove_client(address_ip_client) 
 
 
 # Inicia uma thread para as funções de recebimento e transmissão
