@@ -107,7 +107,7 @@ https://github.com/Dev-JoseRonaldo/real-time-udp-chat.git
 
 ## Colaboradores
 
-<table>
+<table align="center">
   <tr>
     <td align="center">
       <a href="https://github.com/bomday">
