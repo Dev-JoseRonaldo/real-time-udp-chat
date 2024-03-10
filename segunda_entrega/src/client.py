@@ -22,6 +22,7 @@ seq_num_client = 0 # Número de sequência do pacote enviado pelo cliente
 ack_to_send = 0 # Número de reconhecimento do pacote enviado pelo servidor 
 client_ip = None 
 nickname = None
+message_buffer = ''
 
 # Função para receber mensagens
 def receive():
@@ -46,7 +47,7 @@ def receive():
         decoded_message = message_received_bytes.decode(encoding="ISO-8859-1")
 
         # Fazendo a verificação do checksum, sequence number e ack
-        if not decoded_message or decoded_message == "FYN-ACK": # Caso não exista mensagem ou seja pacote de finalização, irá conferir ack number
+        if not decoded_message or decoded_message == "FYN-ACK" or decoded_message == "SYN-ACK": # Caso não exista mensagem ou seja pacote de finalização, irá conferir ack number
             if checksum != checksum_check or ack_num != seq_num_client:  # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
                 print("Houve corrupção no pacote!")
             else: # Recebe ack do pacote recebido
@@ -55,6 +56,10 @@ def receive():
                 if decoded_message == "FYN-ACK":
                     send_packet("ACK", client, 9999, client_ip, nickname, seq_num, ack_to_send) # Envia reconhecimento de FYN-ACK
                     is_conected = False # Desconecta quando envia ack de reconhecimento de terminar conexão do server
+                
+                elif decoded_message == "SYN-ACK":
+                    send_packet(message_buffer, client, 9999, client_ip, nickname, seq_num_client, ack_to_send)
+                    is_conected = True
                 else:
                     if seq_num_client == 0:
                         seq_num_client = 1
@@ -110,10 +115,9 @@ while True:
     else:
         # Verifica se a mensagem inserida é um o comando para entrar na sala
         if message.startswith("hi, meu nome eh "):
-            nickname = message[16:]
-            is_conected = True
-            
-            send_packet(message, client, 9999, client_ip, nickname, seq_num_client, ack_to_send)
+            nickname = message[16:] 
+            message_buffer = message
+            send_packet("SYN", client, 9999, client_ip, nickname, seq_num_client, ack_to_send)
 
         # Caso seja o comando de sair da sala
         elif message == "bye":

@@ -59,12 +59,14 @@ def receive():
         checksum = bin(checksum)[2:]
         checksum = '0' * (len(checksum_check) - len(checksum)) + checksum
 
-
         # Converte a sequência de bytes da mensagem recebida em uma string    
         decoded_message = message_received_bytes.decode(encoding="ISO-8859-1") 
 
+        if decoded_message == "SYN":
+            send_packet("SYN-ACK", server, address_ip_client, None, "3-way-handshake", seq_num, ack_num)
+
         # Verificando se o cliente já está na lista de clientes
-        if address_ip_client not in clients_ip:
+        elif address_ip_client not in clients_ip:
             nickname = decoded_message.split("eh ")[1]
             clients_ip.append(address_ip_client)
             clients_nickname.append(nickname)
@@ -74,81 +76,82 @@ def receive():
             index = clients_ip.index(address_ip_client)
             nickname = clients_nickname[index]
 
-        current_seq_num = seq_and_ack_controler[index][0]
-        current_ack_num = seq_and_ack_controler[index][1]
+        if seq_and_ack_controler:
+            current_seq_num = seq_and_ack_controler[index][0]
+            current_ack_num = seq_and_ack_controler[index][1]
         
-        # Fazendo a verificação do checksum, sequence number e ack
-        if decoded_message == "ACK": # Remove o cliente das listas clients_ip, clients_nickname e seq_and_ack_controler
-            finalization_ack = True
-        elif decoded_message: # Caso exista mensagem para ser enviada a usuários, irá conferir checksum e sequence number
-            message = ''
+            # Fazendo a verificação do checksum, sequence number e ack
+            if decoded_message == "ACK": # Remove o cliente das listas clients_ip, clients_nickname e seq_and_ack_controler
+                finalization_ack = True
+            elif decoded_message: # Caso exista mensagem para ser enviada a usuários, irá conferir checksum e sequence number
+                message = ''
 
-            if checksum != checksum_check or seq_num != current_ack_num: 
-                if checksum != checksum_check:
-                    print("Houve corrupção no pacote!")
+                if checksum != checksum_check or seq_num != current_ack_num: 
+                    if checksum != checksum_check:
+                        print("Houve corrupção no pacote!")
 
-                if current_ack_num == 0:
-                    send_packet(message, server, address_ip_client, None, nickname, seq_num, 1)
-                else:
-                    send_packet(message, server, address_ip_client, None, nickname, seq_num, 0)
-
-                # resetando a lista de fragmentos
-                received_chunks = 0
-                rec_list = []
-            
-            else: # Enviará mensagem para usuários conectados e ack do pacote recebido para remetente do pacote
-                if decoded_message == "bye":
-                    send_packet("FYN-ACK", server, address_ip_client, None, nickname, seq_num, current_ack_num)
-                else:
-                    send_packet(message, server, address_ip_client, None, nickname, seq_num, current_ack_num)
-                
-                # Atualiza próximo ack a ser enviado
-                if current_ack_num == 0:
-                    seq_and_ack_controler[index][1] = 1
-                else:
-                    seq_and_ack_controler[index][1] = 0
-                
-                # Adiciona fragCount posições vazias na lista de fragmentos recebidos
-                # Serve para salvar os fragmentos na ordem correta
-                if len(rec_list) < fragCount:
-                    need_to_add = fragCount - len(rec_list)
-                    rec_list.extend([''] * need_to_add)
-
-                # Adiciona o fragmento recebido na lista de fragmentos recebidos
-                rec_list[fragIndex] = message_received_bytes
-                received_chunks += 1
-
-                # Caso já tenha recebido todos os fragmentos
-                if received_chunks == fragCount:
-                    #salvando o arquivo
-                    content = b''.join(rec_list) # Juntando os fragmentos
-                    content = content.decode(encoding = "ISO-8859-1") # Decodificando a mensagem
-
-                    if content.startswith("hi, meu nome eh "):
-                        messages.put((decoded_message, address_ip_client, nickname))
-                    elif content.startswith("bye"):
-                        messages.put((decoded_message, address_ip_client, nickname))
-                    else:   
-                        message = f"{nickname}: {content}"
-
-                        # Salvando a mensagem na fila
-                        messages.put((message, address_ip_client, nickname))
+                    if current_ack_num == 0:
+                        send_packet(message, server, address_ip_client, None, nickname, seq_num, 1)
+                    else:
+                        send_packet(message, server, address_ip_client, None, nickname, seq_num, 0)
 
                     # resetando a lista de fragmentos
                     received_chunks = 0
                     rec_list = []
+                
+                else: # Enviará mensagem para usuários conectados e ack do pacote recebido para remetente do pacote
+                    if decoded_message == "bye":
+                        send_packet("FYN-ACK", server, address_ip_client, None, nickname, seq_num, current_ack_num)
+                    else:
+                        send_packet(message, server, address_ip_client, None, nickname, seq_num, current_ack_num)
+                    
+                    # Atualiza próximo ack a ser enviado
+                    if current_ack_num == 0:
+                        seq_and_ack_controler[index][1] = 1
+                    else:
+                        seq_and_ack_controler[index][1] = 0
+                    
+                    # Adiciona fragCount posições vazias na lista de fragmentos recebidos
+                    # Serve para salvar os fragmentos na ordem correta
+                    if len(rec_list) < fragCount:
+                        need_to_add = fragCount - len(rec_list)
+                        rec_list.extend([''] * need_to_add)
 
-        else: # Caso seja pacote de reconhecimento, irá conferir ack number
-            if checksum != checksum_check or ack_num != current_seq_num: # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
-                if checksum != checksum_check:
-                    print(f"Houve corrupção no pacote!")
-            else: # Recebe ack do pacote recebido e atualiza próximo número de sequência a ser enviado
-                c.ACK_RECEIVED = True # Afirma que recebeu ack
+                    # Adiciona o fragmento recebido na lista de fragmentos recebidos
+                    rec_list[fragIndex] = message_received_bytes
+                    received_chunks += 1
 
-                if current_seq_num == 0:
-                    seq_and_ack_controler[index][0] = 1
-                elif current_seq_num == 1:
-                    seq_and_ack_controler[index][0] = 0
+                    # Caso já tenha recebido todos os fragmentos
+                    if received_chunks == fragCount:
+                        #salvando o arquivo
+                        content = b''.join(rec_list) # Juntando os fragmentos
+                        content = content.decode(encoding = "ISO-8859-1") # Decodificando a mensagem
+
+                        if content.startswith("hi, meu nome eh "):
+                            messages.put((decoded_message, address_ip_client, nickname))
+                        elif content.startswith("bye"):
+                            messages.put((decoded_message, address_ip_client, nickname))
+                        else:   
+                            message = f"{nickname}: {content}"
+
+                            # Salvando a mensagem na fila
+                            messages.put((message, address_ip_client, nickname))
+
+                        # resetando a lista de fragmentos
+                        received_chunks = 0
+                        rec_list = []
+
+            else: # Caso seja pacote de reconhecimento, irá conferir ack number
+                if checksum != checksum_check or ack_num != current_seq_num: # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
+                    if checksum != checksum_check:
+                        print(f"Houve corrupção no pacote!")
+                else: # Recebe ack do pacote recebido e atualiza próximo número de sequência a ser enviado
+                    c.ACK_RECEIVED = True # Afirma que recebeu ack
+
+                    if current_seq_num == 0:
+                        seq_and_ack_controler[index][0] = 1
+                    elif current_seq_num == 1:
+                        seq_and_ack_controler[index][0] = 0
 
 # Função para transmitir mensagens a todos os clientes
 def broadcast():
