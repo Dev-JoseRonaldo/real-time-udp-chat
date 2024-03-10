@@ -8,6 +8,7 @@ from utils.send_packet import send_packet
 import utils.constants as c
 from utils.print_commands import print_commands
 from utils.checksum import find_checksum
+from utils.folder_management import delete_folder
 
 # Criação do socket UDP
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -29,6 +30,10 @@ def receive():
     global client, seq_num_client, ack_to_send, client_ip, nickname, is_conected
 
     while True:
+        # mensagem chegou, apagar pastas
+        if nickname:
+            delete_folder("./segunda_entrega/data", nickname)
+
         message_received_bytes, _ = client.recvfrom(c.BUFF_SIZE)
 
         header = message_received_bytes[:c.HEADER_SIZE] # Separando o Header
@@ -75,7 +80,12 @@ def receive():
                 else:
                     send_packet("", client, 9999, client_ip, nickname, seq_num, 0)
             else: # Lê mensagem e envia ack do pacote recebido
-                print(decoded_message)
+                if(decoded_message.startswith(f"{client_ip}:{CLIENT_ADRR}")):
+                    decoded_message = decoded_message[(16 + len(nickname)):]
+                    print(f"Você{decoded_message}")
+                else:
+                    print(decoded_message)
+
                 send_packet("", client, 9999, client_ip, nickname, seq_num, ack_to_send)
 
                 # Atualiza próximo ack a ser enviado
@@ -95,6 +105,7 @@ is_conected = False
 while True:
     # Solicita ao usuário para inserir uma mensagem
     message = input()
+
     client_ip = client.getsockname()[0]
 
     if message == "":

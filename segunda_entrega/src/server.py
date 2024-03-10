@@ -10,6 +10,7 @@ from utils.send_packet import send_packet
 import utils.constants as c
 from utils.get_current_time_and_date import get_current_time_and_date
 from utils.checksum import find_checksum
+from utils.folder_management import delete_folder
 
 # Inicialia fila para armazenar mensagens a serem processadas
 messages = queue.Queue()
@@ -42,7 +43,6 @@ def receive():
     rec_list = []
 
     while True:
-
         message_received_bytes, address_ip_client = server.recvfrom(c.BUFF_SIZE)
 
         header = message_received_bytes[:c.HEADER_SIZE] # Separando o Header
@@ -63,7 +63,7 @@ def receive():
         decoded_message = message_received_bytes.decode(encoding="ISO-8859-1") 
 
         if decoded_message == "SYN":
-            send_packet("SYN-ACK", server, address_ip_client, None, "3-way-handshake", seq_num, ack_num)
+            send_packet("SYN-ACK", server, address_ip_client, None, f"3-way-handshake-{address_ip_client}", seq_num, ack_num)
 
         # Verificando se o cliente já está na lista de clientes
         elif address_ip_client not in clients_ip:
@@ -72,6 +72,9 @@ def receive():
             clients_nickname.append(nickname)
             seq_and_ack_controler.append([0, 0])
             index = clients_ip.index(address_ip_client)
+
+            #deletar 3-way handshake
+            delete_folder("./segunda_entrega/data", f"3-way-handshake-{str(address_ip_client)}", True)
         else:
             index = clients_ip.index(address_ip_client)
             nickname = clients_nickname[index]
@@ -171,14 +174,20 @@ def broadcast():
 
                 try:
                     if decoded_message.startswith("hi, meu nome eh "): # Verifica se a mensagem é uma mensagem de inscrição
-
                         # Envia mensagem de notificação de entrada do novo cliente
                         send_packet(f"{nickname} se juntou", server, client_ip, None, name, current_seq_num, current_ack_num)
 
-                    elif decoded_message == "bye": # Verifica se a mensagem é uma mensagem de saída
-                        
+                        # mensagem chegou, apagar pastas
+                        if nickname:
+                            delete_folder("./segunda_entrega/data", nickname, True)
+
+                    elif decoded_message == "bye": # Verifica se a mensagem é uma mensagem de saída                 
                         # Envia mensagem de notificação de saída do cliente
                         send_packet(f"{nickname} saiu da sala!", server, client_ip, None, name, current_seq_num, current_ack_num)
+
+                        # mensagem chegou, apagar pastas
+                        if nickname:
+                            delete_folder("./segunda_entrega/data", nickname, True)
                         
                     else:
                         ip = address_ip_client[0]
@@ -187,6 +196,10 @@ def broadcast():
                         message_output = f'{ip}:{port}/~{decoded_message} {get_current_time_and_date()}'
 
                         send_packet(message_output, server, client_ip, None, name, current_seq_num, current_ack_num)
+
+                        # mensagem chegou, apagar pastas
+                        if nickname:
+                            delete_folder("./segunda_entrega/data", nickname, True)
 
                 except Exception as e:
                     print(f"Erro ao enviar mensagem: {e}")
