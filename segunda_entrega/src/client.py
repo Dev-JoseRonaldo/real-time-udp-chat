@@ -1,8 +1,8 @@
 # Importando bibliotecas python 
-import socket # Cria sockets para comunicação em uma rede
+import socket # Cria sockets par comunicação em uma rede
 import random # Possibilita gerar números aleatórios
 import threading # Cria threads, que são úteis para executar operações simultâneas
-import struct # Bilioteca que interpreta bytes como dados binários compactados
+import struct # Bilioteca que Interpreta bytes como dados binários compactados
 
 from utils.send_packet import send_packet
 import utils.constants as c
@@ -15,8 +15,6 @@ client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Atribuição de uma porta aleatória entre 1000 e 9998
 CLIENT_ADRR = random.randint(1000, 9998)
 client.bind((c.SERVER_ADRR[0], CLIENT_ADRR))
-
-#fragSize = c.FRAG_SIZE
 
 # Variáveis Globais
 seq_num_client = 0 # Número de sequência do pacote enviado pelo cliente
@@ -41,9 +39,9 @@ def receive():
         (fragSize, fragIndex, fragCount, seq_num, ack_num, checksum) = struct.unpack('!IIIIII', header) # Desempacotando o header
 
         header_no_checksum = struct.pack('!IIIII', fragSize, fragIndex, fragCount, seq_num, ack_num) # Criando um header sem o checksum, para fazer a verificação de checksum depois
-        fragment_no_checksum = header_no_checksum + message_received_bytes # Criando um fragmento que o header não tem checksum, para comparar com o checksum que foi feito no remetente
+        fragment_no_checksum = header_no_checksum + message_received_bytes # Criando um fragmento que o header não tem checksum, para comparar com o checksum que foi feito no remetente, pois lá não havia checksum no header quando o checksum foi calculado
 
-        checksum_check = find_checksum(fragment_no_checksum) # Criando o checksum do lado do receptor, usando soma com complemento de 1
+        checksum_check = find_checksum(fragment_no_checksum) # Criando o checksum do lado do receptor(servidor neste caso)
 
         # Normalizando o checksum para comparação
         checksum = bin(checksum)[2:]
@@ -52,7 +50,7 @@ def receive():
         decoded_message = message_received_bytes.decode(encoding="ISO-8859-1")
 
         # Fazendo a verificação do checksum, sequence number e ack
-        if not decoded_message or decoded_message == "FYN-ACK" or decoded_message == "SYN-ACK": # Caso não exista mensagem ou seja pacote de finalização, irá conferir ack number
+        if not decoded_message or decoded_message == "FYN-ACK" or decoded_message == "SYN-ACK": # Caso não exista mensagem, seja pacote de finalização ou pacote de inicialização, irá conferir ack number
             if checksum != checksum_check or ack_num != seq_num_client:  # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
                 print("Houve corrupção no pacote!")
             else: # Recebe ack do pacote recebido
@@ -82,10 +80,9 @@ def receive():
             else: # Lê mensagem e envia ack do pacote recebido
                 if(decoded_message.startswith(f"{client_ip}:{CLIENT_ADRR}")):
                     decoded_message = decoded_message[(16 + len(nickname)):]
-                    print(f"Você{decoded_message}")
+                    print(f"{client_ip}:{CLIENT_ADRR}/~Você{decoded_message}")
                 else:
                     print(decoded_message)
-
                 send_packet("", client, 9999, client_ip, nickname, seq_num, ack_to_send)
 
                 # Atualiza próximo ack a ser enviado
