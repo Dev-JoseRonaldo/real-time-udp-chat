@@ -22,7 +22,7 @@ def send_packet(message, sender, destination_address, origin_adress=None, nickna
     fragCount = math.ceil(len(contents) / fragSize) # Quantidade total de fragmentos
 
     # Envia os fragmentos
-    if message == "FYN-ACK" or message == "ACK" or message == "": # Se pacote enviado for de reconhecimento
+    if message == "FYN-ACK" or message == "ACK" or message == "" or message == "SYN" or message == "SYN-ACK": # Se pacote enviado for de reconhecimento
         fragment = create_fragment(contents, fragSize, fragIndex, fragCount, seq_num, ack_num)
         
         if origin_adress:
@@ -31,7 +31,7 @@ def send_packet(message, sender, destination_address, origin_adress=None, nickna
             sender.sendto(fragment, (destination_address)) # Envia o fragmento (header + data) para cliente
 
     else: # Se pacote enviado for com conteúdo
-        if message == "FYN-ACK" or message == "ACK": # Se for pacote de reconhecimento de finalização
+        if message == "FYN-ACK" or message == "ACK" or message == "SYN" or message == "SYN-ACK": # Se for pacote de reconhecimento de finalização
             fragment = create_fragment(contents, fragSize, fragIndex, fragCount, seq_num, ack_num)
             
             if origin_adress:
