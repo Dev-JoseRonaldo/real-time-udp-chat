@@ -9,6 +9,7 @@ from utils.convert_txt import convert_string_to_txt
 from utils.send_packet import send_packet
 import utils.constants as c
 from utils.get_current_time_and_date import get_current_time_and_date
+from utils.checksum import find_checksum
 
 # Inicialia fila para armazenar mensagens a serem processadas
 messages = queue.Queue()
@@ -44,15 +45,20 @@ def receive():
 
         message_received_bytes, address_ip_client = server.recvfrom(c.BUFF_SIZE)
 
-        header = message_received_bytes[:24] # Separando o Header
-        message_received_bytes = message_received_bytes[24:] # Separando a mensagem
+        header = message_received_bytes[:c.HEADER_SIZE] # Separando o Header
+        message_received_bytes = message_received_bytes[c.HEADER_SIZE:] # Separando a mensagem
 
         (fragSize, fragIndex, fragCount, seq_num, ack_num, checksum) = struct.unpack('!IIIIII', header) # Desempacotando o header
 
         header_no_checksum = struct.pack('!IIIII', fragSize, fragIndex, fragCount, seq_num, ack_num) # Criando um header sem o checksum, para fazer a verificação de checksum depois
         fragment_no_checksum = header_no_checksum + message_received_bytes # Criando um fragmento que o header não tem checksum, para comparar com o checksum que foi feito no remetente, pois lá não havia checksum no header quando o checksum foi calculado
 
-        checksum_check = crc32(fragment_no_checksum) # Criando o checksum do lado do receptor(servidor neste caso), usando o CRC
+        checksum_check = find_checksum(fragment_no_checksum) # Criando o checksum do lado do receptor(servidor neste caso), usando o CRC
+               
+        # Normalizando o checksum para comparação
+        checksum = bin(checksum)[2:]
+        checksum = '0' * (len(checksum_check) - len(checksum)) + checksum
+
 
         # Converte a sequência de bytes da mensagem recebida em uma string    
         decoded_message = message_received_bytes.decode(encoding="ISO-8859-1") 

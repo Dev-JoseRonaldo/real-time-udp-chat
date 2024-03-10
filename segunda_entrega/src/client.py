@@ -3,11 +3,11 @@ import socket # Cria sockets par comunicação em uma rede
 import random # Possibilita gerar números aleatórios
 import threading # Cria threads, que são úteis para executar operações simultâneas
 import struct # Bilioteca que Interpreta bytes como dados binários compactados
-from zlib import crc32 # Calcula uma soma de verificação CRC 32 bits
 
 from utils.send_packet import send_packet
 import utils.constants as c
 from utils.print_commands import print_commands
+from utils.checksum import find_checksum
 
 # Criação do socket UDP
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -30,16 +30,20 @@ def receive():
     while True:
         message_received_bytes, _ = client.recvfrom(c.BUFF_SIZE)
 
-        header = message_received_bytes[:24] # Separando o Header
-        message_received_bytes = message_received_bytes[24:] # Separando a mensagem
+        header = message_received_bytes[:c.HEADER_SIZE] # Separando o Header
+        message_received_bytes = message_received_bytes[c.HEADER_SIZE:] # Separando a mensagem
         (fragSize, fragIndex, fragCount, seq_num, ack_num, checksum) = struct.unpack('!IIIIII', header) # Desempacotando o header
 
         header_no_checksum = struct.pack('!IIIII', fragSize, fragIndex, fragCount, seq_num, ack_num) # Criando um header sem o checksum, para fazer a verificação de checksum depois
         fragment_no_checksum = header_no_checksum + message_received_bytes # Criando um fragmento que o header não tem checksum, para comparar com o checksum que foi feito no remetente, pois lá não havia checksum no header quando o checksum foi calculado
 
-        checksum_check = crc32(fragment_no_checksum) # Criando o checksum do lado do receptor(servidor neste caso), usando o CRC
+        checksum_check = find_checksum(fragment_no_checksum) # Criando o checksum do lado do receptor(servidor neste caso)
 
-        decoded_message = message_received_bytes.decode()
+        # Normalizando o checksum para comparação
+        checksum = bin(checksum)[2:]
+        checksum = '0' * (len(checksum_check) - len(checksum)) + checksum
+
+        decoded_message = message_received_bytes.decode(encoding="ISO-8859-1")
 
         # Fazendo a verificação do checksum, sequence number e ack
         if not decoded_message or decoded_message == "FYN-ACK": # Caso não exista mensagem ou seja pacote de finalização, irá conferir ack number
