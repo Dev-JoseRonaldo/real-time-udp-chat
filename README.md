@@ -35,14 +35,26 @@ Projeto composto por duas etapas:
 
 ## Requisitos preliminares
 
-Antes de começar, verifique se você atendeu aos seguintes requisitos (instruções específicas para rodar no VSCode):
+Antes de começar, verifique se você atendeu aos seguintes requisitos:
 
-* Deve executar os arquivos da pasta `segunda_entrega`;
-* Você instalou o puglin `python`;
-* Está executando o arquivo server.py em um terminal separado;
-* Está executando o arquivo client.py em um terminal separado.
+* Clone o projeto e abra em seu editor de código favorito;
+* Certifique que você está com o `python 3.10+` instalado;
+* Certifique que você está com todos os plugins, nescessários para rodar um projeto python, instalados em seu editor de código;
+* Inicialmente, você deve abrir seu terminal na pasta `real-time-udp-chat`;
+* Em seguida, você deve executar o arquivo `server.py` nesse terminal.
+* Para conectar um usuário ao chat, execute o arquivo `client.py` em um teminal separado (esse terminal também deve ser aberto na pasta `real-time-upd-chat`)
 
 OBS: Você pode adicionar outros clientes duplicando o arquivo client.py e executando cada cliente em um terminal separado.
+
+### Como Executar o Projeto
+
+1. Primeiro, o usuário deve rodar simultaneamente os dois principais arquivos (nesta ordem) em terminais diferentes:
+   - Rodar o arquivo _server.py_
+   - Rodar o arquivo _client.py_
+
+2. A partir disso, o primeiro usuário poderá usar o chat.
+
+3. Caso outro usuário deseje usar o chat, é preciso rodar o _client.py_ novamente em outro terminal, de modo que haverá um terminal com _client.py_ para cada pessoa que estiver utilizando o chat.
 
 ## Implementação
 
