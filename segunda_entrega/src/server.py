@@ -22,6 +22,8 @@ server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Atribuição do endereço do servidor
 server.bind(c.SERVER_ADRR)
 
+finalization_ack = False # Avisa se ack de finalização foi recebido
+
 #Função responsável por remover um client de clients_ip e clients_nickname
 def remove_client(client): 
     index_client = clients_ip.index(client)
@@ -31,6 +33,7 @@ def remove_client(client):
 
 # Função para receber mensagens dos clientes
 def receive():
+    global finalization_ack
 
     # Numero de fragmentos recebidos
     received_chunks = 0
@@ -69,7 +72,9 @@ def receive():
         current_ack_num = seq_and_ack_controler[index][1]
         
         # Fazendo a verificação do checksum, sequence number e ack
-        if decoded_message: # Caso exista mensagem, irá conferir checksum e sequence number
+        if decoded_message == "ACK": # Remove o cliente das listas clients_ip, clients_nickname e seq_and_ack_controler
+            finalization_ack = True
+        elif decoded_message: # Caso exista mensagem para ser enviada a usuários, irá conferir checksum e sequence number
             message = ''
 
             if checksum != checksum_check or seq_num != current_ack_num: 
@@ -86,7 +91,10 @@ def receive():
                 rec_list = []
             
             else: # Enviará mensagem para usuários conectados e ack do pacote recebido para remetente do pacote
-                send_packet(message, server, address_ip_client, None, nickname, seq_num, current_ack_num)
+                if decoded_message == "bye":
+                    send_packet("FYN-ACK", server, address_ip_client, None, nickname, seq_num, current_ack_num)
+                else:
+                    send_packet(message, server, address_ip_client, None, nickname, seq_num, current_ack_num)
                 
                 # Atualiza próximo ack a ser enviado
                 if current_ack_num == 0:
@@ -123,21 +131,23 @@ def receive():
                     # resetando a lista de fragmentos
                     received_chunks = 0
                     rec_list = []
-        else: # Caso não exista mensagem, irá conferir ack number
+
+        else: # Caso seja pacote de reconhecimento, irá conferir ack number
             if checksum != checksum_check or ack_num != current_seq_num: # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
                 if checksum != checksum_check:
                     print(f"Houve corrupção no pacote!")
             else: # Recebe ack do pacote recebido e atualiza próximo número de sequência a ser enviado
+                c.ACK_RECEIVED = True # Afirma que recebeu ack
+
                 if current_seq_num == 0:
                     seq_and_ack_controler[index][0] = 1
                 elif current_seq_num == 1:
                     seq_and_ack_controler[index][0] = 0
-           
-            server.settimeout(None)  # Define o timeout de volta para None para desabilitá-lo
-
 
 # Função para transmitir mensagens a todos os clientes
 def broadcast():
+    global finalization_ack
+    
     while True:
         while not messages.empty(): # Caso exista mensagens na fila
             # Pega bytes e endereço IP do cliente da mensagem da fila 
@@ -156,9 +166,9 @@ def broadcast():
                         # Envia mensagem de notificação de entrada do novo cliente
                         send_packet(f"{nickname} se juntou", server, client_ip, None, name, current_seq_num, current_ack_num)
 
-                    elif decoded_message == "bye": # Verifica se a mensagem é uma mensagem de inscrição
+                    elif decoded_message == "bye": # Verifica se a mensagem é uma mensagem de saída
                         
-                        # Envia mensagem de notificação de saida do cliente
+                        # Envia mensagem de notificação de saída do cliente
                         send_packet(f"{nickname} saiu da sala!", server, client_ip, None, name, current_seq_num, current_ack_num)
                         
                     else:
@@ -172,10 +182,11 @@ def broadcast():
                 except Exception as e:
                     print(f"Erro ao enviar mensagem: {e}")
 
-            # Remove o cliente das listas clients_ip e clients_nickname
             if decoded_message == "bye":
-                remove_client(address_ip_client) 
-
+                while not finalization_ack:
+                    pass
+                remove_client(address_ip_client)
+                finalization_ack = False
 
 # Inicia uma thread para as funções de recebimento e transmissão
 receive_tread = threading.Thread(target=receive)
