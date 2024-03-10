@@ -1,17 +1,155 @@
-# Projeto Redes UDP RTC 3.0
+<a name="readme-top"></a>
+# <p align="center">Chat de sala única com UDP e RDT3.0</p>
 
-## Sobre
+> Servidor de chat de sala única, onde os clientes se conectam à sala, recebendo e enviando mensagens para outros usuários.
 
-Neste projeto será desenvolvido um servidor de chat de sala única, onde os
-clientes se conectam à sala e recebem todas as mensagens dos outros usuários, além de
-também poderem enviar mensagens. Entretanto, essas mensagens não são strings como o
-convencional, mas, a fim de haver transferência de arquivos e segmentação dos mesmos,
-serão arquivos .txt que sendo lidos pelo servidor deverão ser impressos no terminal como
-mensagens.
-<br>
-<br>
-O projeto será composto por duas etapas, em que na primeira etapa o grupo deve
-desenvolver uma ferramenta de troca de arquivos .txt e reverberar isso em um chat de
-mensagens que utilize comunicação com UDP. Na segunda etapa, deverá ser
-implementado ao chat básico de troca de mensagens já feito, um protocolo de transferência
-confiável, utilizando UDP e o método RDT 3.0.
+```
+Projeto composto por duas etapas:
+1. Desenvolvimento de uma ferramenta de troca de arquivos .txt e reverberação disso em um chat de mensagens, utilizando comunicação com UDP;
+2. Implementação de um protocolo de transferência confiável ao chat básico de troca de mensagens já feito, utilizando UDP e o método RDT 3.0 apresentado em sala de aula.
+```
+
+<details>
+  <summary>Tabela de Conteúdos</summary>
+    <ol>
+        <li><a href="#requisitos-preliminares">Requisitos preliminares</a></li>
+        <li>
+        <a href="#implementação">Implementação</a>
+        <ul>
+            <li><a href="#linguagem-utilizada">Linguagem Utilizada</a></li>
+            <li><a href="#funcionalidades">Funcionalidades</a></li>
+            <li><a href="#bibliotecas-utilizadas">Bibliotecas Utilizadas</a></li>
+            <li><a href="#github">GitHub</a></li>
+        </ul>
+        </li>
+        <li>
+        <a href="#imagens">Imagens</a>
+        <ul>
+            <li><a href="#figura0">Figura 0</a></li>
+        </ul>
+        </li>
+        <li><a href="#colaboradores">Colaboradores</a></li>
+        <li><a href="#contatos">Contatos</a></li>
+    </ol>
+</details>
+
+## Requisitos preliminares
+
+Antes de começar, verifique se você atendeu aos seguintes requisitos (instruções específicas para rodar no VSCode):
+
+* Deve executar os arquivos da pasta `segunda_entrega`;
+* Você instalou o puglin `python`;
+* Está executando o arquivo server.py em um terminal separado;
+* Está executando o arquivo client.py em um terminal separado.
+
+OBS: Você pode adicionar outros clientes duplicando o arquivo client.py e executando cada cliente em um terminal separado.
+
+## Implementação
+
+### Linguagem Utilizada
+
+Linguagem de programação Python
+
+### Funcionalidades
+
+1. Chat UDP de sala única para múltiplos usuários com transferência confiável RDT 3.0; 
+2. Cliente e Servidor;
+3. Troca de arquivos em formato de texto (.txt);
+4. Conectar, sair e enviar mensagens na sala;
+5. Implementação RDT 3.0: 3 Way Handshake (SYN-ACK), processo de finalização (FYN-ACK), checksum, timeout e tratamento de perda ou corrupção de pacotes de dados e de reconhecimento.
+
+### Bibliotecas utilizadas
+
+- `Datetime`: Manipula datas e horas.
+
+- `Math`: Fornece funções matemáticas avançadas.
+
+- `Queue`: Aplicamos a biblioteca _tkinter_ para criar interfaces gráficas de usuário (GUI).
+  
+- `Random`: Utilizado para gerar números de porta aleatórios.
+
+- `Socket`: Cria sockets para comunicação em uma rede.
+
+- `Struct`: Bilioteca que interpreta bytes como dados binários compactados.
+
+- `Threading`: Cria threads, que são úteis para executar operações simultâneas.
+
+- `Time`: Utilizado para aplicar timeout.
+
+### GitHub
+
+Link para o repositório: 
+https://github.com/Dev-JoseRonaldo/real-time-udp-chat.git
+
+<p align="right">(<a href="#readme-top">voltar ao topo</a>)</p>
+
+## Imagens
+
+### <p id="figura0" align="center">Figura 0</p>
+
+<p align="center">
+    <img alt="Tela de Início" src="images/figure0.png" width="80%">
+</p>
+
+<p align="right">(<a href="#readme-top">voltar ao topo</a>)</p>
+
+## Colaboradores
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/gugaldox">
+        <img src="https://avatars.githubusercontent.com/u/131917694?v=4" width="200px;" border-radius="50%;" alt="Foto do Colaborador"/><br>
+        <sub><b>Aldo Lemos</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/bomday">
+        <img src="https://avatars.githubusercontent.com/u/66028004?v=4" width="200px;" border-radius="50%;" alt="Foto do Colaborador"/><br>
+        <sub><b>Dayane Lima</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Dev-JoseRonaldo">
+        <img src="https://avatars.githubusercontent.com/u/83667469?v=4" width="200px;" border-radius="50%;" alt="Foto do Colaborador"/><br>
+        <sub><b>José Ronaldo</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/luiz-linkezio">
+        <img src="https://avatars.githubusercontent.com/u/125787137?v=4" width="200px;" border-radius="50%;" alt="Foto do Colaborador"/><br>
+        <sub><b>Luiz Henrique</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Mariana-Marinho">
+        <img src="https://avatars.githubusercontent.com/u/83255127?v=4" width="200px;" border-radius="50%;" alt="Foto do Colaborador"/><br>
+        <sub><b>Mariana Marinho</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
+
+## Contatos
+
+#### Aldo Lemos
+- Linkedin: https://www.linkedin.com/in/aldo-lemos-ba3331254/
+- Email: asfl@cin.ufpe.br
+  
+#### Dayane Lima
+- Linkedin: https://www.linkedin.com/in/dayane-lima-5b2558199/
+- Email: dayanecamilelima@gmail.com 
+  
+#### José Ronaldo
+- Linkedin: https://www.linkedin.com/in/devjoseronaldo/
+- Email: dev.joseronaldo@gmail.com
+
+#### Luiz Henrique
+- Linkedin: https://www.linkedin.com/in/lhbas/
+- Email: henriqueb999@yahoo.com.br
+
+#### Mariana Marinho 
+- Linkedin: https://www.linkedin.com/in/mariana--marinho/
+- Email: mmsa@cin.ufpe.br
+
+<p align="right">(<a href="#readme-top">voltar ao topo</a>)</p>

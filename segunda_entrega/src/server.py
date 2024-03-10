@@ -1,9 +1,8 @@
 # Importando bibliotecas python 
-import socket # Cria sockets par comunicação em uma rede
+import socket # Cria sockets para comunicação em uma rede
 import queue # Fila para armazenar mensagens
 import threading # Cria threads, que são úteis para executar operações simultâneas
-import struct # Bilioteca que Interpreta bytes como dados binários compactados
-from zlib import crc32 # Calcula uma soma de verificação CRC 32 bits
+import struct # Bilioteca que interpreta bytes como dados binários compactados
 
 from utils.convert_txt import convert_string_to_txt
 from utils.send_packet import send_packet
@@ -51,9 +50,9 @@ def receive():
         (fragSize, fragIndex, fragCount, seq_num, ack_num, checksum) = struct.unpack('!IIIIII', header) # Desempacotando o header
 
         header_no_checksum = struct.pack('!IIIII', fragSize, fragIndex, fragCount, seq_num, ack_num) # Criando um header sem o checksum, para fazer a verificação de checksum depois
-        fragment_no_checksum = header_no_checksum + message_received_bytes # Criando um fragmento que o header não tem checksum, para comparar com o checksum que foi feito no remetente, pois lá não havia checksum no header quando o checksum foi calculado
+        fragment_no_checksum = header_no_checksum + message_received_bytes # Criando um fragmento que o header não tem checksum, para comparar com o checksum que foi feito no remetente
 
-        checksum_check = find_checksum(fragment_no_checksum) # Criando o checksum do lado do receptor(servidor neste caso), usando o CRC
+        checksum_check = find_checksum(fragment_no_checksum) # Criando o checksum do lado do receptor, usando soma com complemento de 1
                
         # Normalizando o checksum para comparação
         checksum = bin(checksum)[2:]

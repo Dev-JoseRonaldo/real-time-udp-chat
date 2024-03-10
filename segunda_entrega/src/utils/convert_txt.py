@@ -1,4 +1,3 @@
-import random
 from utils.update_dict_file_counter import client_dict_file_counter, server_dict_file_counter, update_dict_file_counter
 
 #função responsável por salvar sstring em arquivo .txt

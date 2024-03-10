@@ -1,5 +1,4 @@
 import struct # Bilioteca que Interpreta bytes como dados binários compactados
-from zlib import crc32 # Calcula uma soma de verificação CRC 32 bits
 
 from utils.checksum import find_checksum
 
