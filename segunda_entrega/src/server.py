@@ -96,14 +96,14 @@ def receive():
                     print(f'Recebeu ACK do FYN-ACK enviado!')
                     finalization_ack = True
                 elif decoded_message: # Caso exista mensagem para ser enviada a usuários, irá conferir checksum e sequence number
-                    if checksum != checksum_check or seq_num != current_ack_num and frag_kkk == False: 
+                    if checksum != checksum_check or seq_num != current_ack_num: 
                         if checksum != checksum_check:
                             print("Houve corrupção no pacote!")
                         print(f'Enviando ACK do último pacote recebido!')
-                        if ack_to_send == 0:
-                            send_packet("", client, 9999, client_ip, nickname, seq_num, 1)
+                        if current_ack_num == 0:
+                            send_packet('', server, address_ip_client, None, nickname, seq_num, 1)
                         else:
-                            send_packet("", client, 9999, client_ip, nickname, seq_num, 0)
+                            send_packet('', server, address_ip_client, None, nickname, seq_num, 0)
 
                         
                         # resetando a lista de fragmentos
@@ -114,11 +114,11 @@ def receive():
                         if decoded_message == "bye":
                             print(f'Enviando FYN-ACK!')
                             send_packet("FYN-ACK", server, address_ip_client, None, nickname, seq_num, current_ack_num)
+                            last_sent_pkt = ("FYN-ACK", server, address_ip_client, None, nickname, seq_num, current_ack_num)
                         else:
                             print(f'Enviando ACK!')
                             send_packet('', server, address_ip_client, None, nickname, seq_num, current_ack_num)
                             last_sent_pkt = ('', server, address_ip_client, None, nickname, seq_num, current_ack_num)
-                            print('', server, address_ip_client, None, nickname, seq_num, current_ack_num)
 
                         # Atualiza próximo ack a ser enviado
                         if current_ack_num == 0:
