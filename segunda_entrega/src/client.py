@@ -10,6 +10,8 @@ from utils.print_commands import print_commands
 from utils.checksum import find_checksum
 from utils.folder_management import delete_folder
 
+import random
+
 # Criação do socket UDP
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Atribuição de uma porta aleatória entre 1000 e 9998
@@ -22,6 +24,7 @@ ack_to_send = 0 # Número de reconhecimento do pacote enviado pelo servidor
 client_ip = None 
 nickname = None
 message_buffer = ''
+last_sent_pkt = None #variavel para checar o ultimo pkt recebido
 
 # Função para receber mensagens
 def receive():
@@ -50,11 +53,26 @@ def receive():
         decoded_message = message_received_bytes.decode(encoding="ISO-8859-1")
 
         # Fazendo a verificação do checksum, sequence number e ack
+
         if not decoded_message or decoded_message == "FYN-ACK" or decoded_message == "SYN-ACK": # Caso não exista mensagem, seja pacote de finalização ou pacote de inicialização, irá conferir ack number
+            if c.TESTANDO == True:
+                checksum = 34242222222222222222222222222222222222222224142152152152152145
+                c.TESTANDO = False
             if checksum != checksum_check or ack_num != seq_num_client:  # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
-                print("Houve corrupção no pacote!")
+                if checksum != checksum_check:
+                    print("Houve corrupção no pacote!")
+                c.TESTANDO = False
+
+                if last_sent_pkt:
+                    print('--------------------------------')
+                    print(*last_sent_pkt)
+                    print('--------------------------------')
+                    print('Reenviando pacote anterior...')
+                    send_packet(*last_sent_pkt)
+                
             else: # Recebe ack do pacote recebido
                 c.ACK_RECEIVED = True # Afirma que recebeu ack
+                print(c.ACK_RECEIVED)
 
                 if decoded_message == "FYN-ACK":
                     send_packet("ACK", client, 9999, client_ip, nickname, seq_num, ack_to_send) # Envia reconhecimento de FYN-ACK
@@ -70,13 +88,16 @@ def receive():
                         seq_num_client = 0
 
         elif decoded_message: # Caso exista mensagem, irá conferir sequence number
+
+            if decoded_message.split()[1] == "kkk":
+                c.TESTANDO = True
+
             if checksum != checksum_check or seq_num != ack_to_send: # Reenvia ack do último pacote reconhecido
-                print("Houve corrupção no pacote!")
-                
-                if ack_to_send == 0:
-                    send_packet("", client, 9999, client_ip, nickname, seq_num, 1)
-                else:
-                    send_packet("", client, 9999, client_ip, nickname, seq_num, 0)
+                if checksum != checksum_check:
+                    print("Houve corrupção no pacote!")
+
+                send_packet("", client, 9999, client_ip, nickname, seq_num, ack_to_send)
+
             else: # Lê mensagem e envia ack do pacote recebido
                 if(decoded_message.startswith(f"{client_ip}:{CLIENT_ADRR}")):
                     decoded_message = decoded_message[(16 + len(nickname)):]
@@ -125,7 +146,8 @@ while True:
         if message.startswith("hi, meu nome eh "):
             nickname = message[16:] 
             message_buffer = message
-            send_packet("SYN", client, 9999, client_ip, nickname, seq_num_client, ack_to_send)
+            message = "SYN"
+            send_packet(message, client, 9999, client_ip, nickname, seq_num_client, ack_to_send)
 
         # Caso seja o comando de sair da sala
         elif message == "bye":
@@ -134,3 +156,6 @@ while True:
         # Se estiver conectado e a mensagem não for um comando, envia essa mensagem para o servidor
         else:
             send_packet(message, client, 9999, client_ip, nickname, seq_num_client, ack_to_send)
+
+        last_sent_pkt = (message, client, 9999, client_ip, nickname, seq_num_client, ack_to_send)
+        print(*last_sent_pkt)

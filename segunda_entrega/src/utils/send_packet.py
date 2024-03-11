@@ -43,7 +43,10 @@ def send_packet(message, sender, destination_address, origin_adress=None, nickna
             while contents: 
                 fragment = create_fragment(contents, fragSize, fragIndex, fragCount, seq_num, ack_num)
 
+                """
                 time_of_last_pkt = time.time()
+                """
+
 
                 if origin_adress:
                     sender.sendto(fragment, (origin_adress, destination_address)) # Envia o fragmento (header + data) para servidor
@@ -51,11 +54,14 @@ def send_packet(message, sender, destination_address, origin_adress=None, nickna
                     sender.sendto(fragment, (destination_address)) # Envia o fragmento (header + data) para cliente
 
                 # Aguarda até que c.ACK_RECEIVED seja True
+                """
                 while not c.ACK_RECEIVED:
                     if time_of_last_pkt + c.TIMEOUT < time.time():
                         print("O envio da mensagem excedeu o tempo limite!")
                         fragment_sent = False
+                        #break
                     pass
+                """    
 
                 if fragment_sent:
                     c.ACK_RECEIVED = False # Reseta status do ack

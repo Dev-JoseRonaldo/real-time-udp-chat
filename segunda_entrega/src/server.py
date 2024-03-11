@@ -26,6 +26,9 @@ server.bind(c.SERVER_ADRR)
 
 finalization_ack = False # Avisa se ack de finalização foi recebido
 
+#variavel para checar o ultimo pkt recebido
+last_sent_pkt = None
+
 #Função responsável por remover um client de clients_ip e clients_nickname
 def remove_client(client): 
     index_client = clients_ip.index(client)
@@ -62,6 +65,9 @@ def receive():
         # Converte a sequência de bytes da mensagem recebida em uma string    
         decoded_message = message_received_bytes.decode(encoding="ISO-8859-1") 
 
+        if decoded_message == "jjj":
+            c.TESTING = True
+
         if decoded_message == "SYN":
             print(f'Enviando SYN-ACK!')
             send_packet("SYN-ACK", server, address_ip_client, None, f"3-way-handshake-{address_ip_client}", seq_num, ack_num)
@@ -97,8 +103,16 @@ def receive():
                         print(f'Enviando ACK do último pacote recebido!')
                         if current_ack_num == 0:
                             send_packet('', server, address_ip_client, None, nickname, seq_num, 1)
+                            print('-----------------------')
+                            print('', server, address_ip_client, None, nickname, seq_num, 1)
+                            print('-----------------------')
                         else:
                             send_packet('', server, address_ip_client, None, nickname, seq_num, 0)
+                            print('-----------------------')
+                            print('', server, address_ip_client, None, nickname, seq_num, 0)
+                            print('-----------------------')
+
+                        
                         
                         # resetando a lista de fragmentos
                         received_chunks = 0
@@ -111,12 +125,16 @@ def receive():
                         else:
                             print(f'Enviando ACK!')
                             send_packet('', server, address_ip_client, None, nickname, seq_num, current_ack_num)
+                            print('', server, address_ip_client, None, nickname, seq_num, current_ack_num)
 
                         # Atualiza próximo ack a ser enviado
                         if current_ack_num == 0:
                             seq_and_ack_controler[index][1] = 1
                         else:
                             seq_and_ack_controler[index][1] = 0
+                        
+                        # guardar o último pacote enviado
+                        last_sent_pkt = (decoded_message, address_ip_client, nickname, seq_num, current_ack_num)
                         
                         # Adiciona fragCount posições vazias na lista de fragmentos recebidos
                         # Serve para salvar os fragmentos na ordem correta
@@ -149,9 +167,18 @@ def receive():
                             rec_list = []
 
                 else: # Caso seja pacote de reconhecimento, irá conferir ack number
+                    if c.TESTING == True:
+                        checksum = 3234424444465677
+                        c.TESTING = False
                     if checksum != checksum_check or ack_num != current_seq_num: # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
                         if checksum != checksum_check:
                             print(f"Houve corrupção no pacote!")
+                            c.TESTING = False
+                        # Reenviar o último pacote enviado
+                        if last_sent_pkt:
+                            print(f'Reenviando último pacote...')
+                            send_packet(*last_sent_pkt)
+                    
                     else: # Recebe ack do pacote recebido e atualiza próximo número de sequência a ser enviado
                         c.ACK_RECEIVED = True # Afirma que recebeu ack
                         print(f'Recebeu ACK do pacote!')
