@@ -107,14 +107,8 @@ https://github.com/Dev-JoseRonaldo/real-time-udp-chat.git
 
 ## Colaboradores
 
-<table>
+<table align="center">
   <tr>
-    <td align="center">
-      <a href="https://github.com/gugaldox">
-        <img src="https://avatars.githubusercontent.com/u/131917694?v=4" width="200px;" border-radius="50%;" alt="Foto do Colaborador"/><br>
-        <sub><b>Aldo Lemos</b></sub>
-      </a>
-    </td>
     <td align="center">
       <a href="https://github.com/bomday">
         <img src="https://avatars.githubusercontent.com/u/66028004?v=4" width="200px;" border-radius="50%;" alt="Foto do Colaborador"/><br>
@@ -143,11 +137,6 @@ https://github.com/Dev-JoseRonaldo/real-time-udp-chat.git
 </table>
 
 ## Contatos
-
-#### Aldo Lemos
-- Linkedin: https://www.linkedin.com/in/aldo-lemos-ba3331254/
-- Email: asfl@cin.ufpe.br
-  
 #### Dayane Lima
 - Linkedin: https://www.linkedin.com/in/dayane-lima-5b2558199/
 - Email: dayanecamilelima@gmail.com 
