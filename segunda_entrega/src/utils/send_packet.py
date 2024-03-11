@@ -55,7 +55,7 @@ def send_packet(message, sender, destination_address, origin_adress=None, nickna
                     if time_of_last_pkt + c.TIMEOUT < time.time():
                         print("O envio da mensagem excedeu o tempo limite!")
                         fragment_sent = False
-                        break
+                        #break
                     pass
 
                 if fragment_sent:

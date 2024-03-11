@@ -82,7 +82,12 @@ def receive():
                 if checksum != checksum_check:
                     print("Houve corrupção no pacote!")
                 print("Enviando ACK do último pacote recebido!")
-                send_packet("", client, 9999, client_ip, nickname, seq_num, ack_to_send)
+                if ack_to_send == 0:
+                    send_packet("", client, 9999, client_ip, nickname, seq_num, 1)
+                    last_sent_pkt = ("", client, 9999, client_ip, nickname, seq_num_client, 1)
+                else:
+                    send_packet("", client, 9999, client_ip, nickname, seq_num, 0)
+                    last_sent_pkt = ("", client, 9999, client_ip, nickname, seq_num_client, 0)
 
             else: # Lê mensagem e envia ack do pacote recebido
                 if(decoded_message.startswith(f"{client_ip}:{CLIENT_ADRR}")):
@@ -91,6 +96,7 @@ def receive():
                 else:
                     print(decoded_message)
                 send_packet("", client, 9999, client_ip, nickname, seq_num, ack_to_send)
+                last_sent_pkt = ("", client, 9999, client_ip, nickname, seq_num_client, ack_to_send)
 
                 # Atualiza próximo ack a ser enviado
                 if ack_to_send == 0:

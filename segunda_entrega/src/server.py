@@ -65,8 +65,8 @@ def receive():
         # Converte a sequência de bytes da mensagem recebida em uma string    
         decoded_message = message_received_bytes.decode(encoding="ISO-8859-1") 
 
-        if decoded_message == "jjj":
-            c.TESTING = True
+        #if decoded_message == "jjj":
+        #    c.TESTING = True
 
         if decoded_message == "SYN":
             print(f'Enviando SYN-ACK!')
@@ -100,12 +100,10 @@ def receive():
                         if checksum != checksum_check:
                             print("Houve corrupção no pacote!")
                         print(f'Enviando ACK do último pacote recebido!')
-                        if current_ack_num == 0:
-                            send_packet('', server, address_ip_client, None, nickname, seq_num, 1)
-                            print('', server, address_ip_client, None, nickname, seq_num, 1)
+                        if ack_to_send == 0:
+                            send_packet("", client, 9999, client_ip, nickname, seq_num, 1)
                         else:
-                            send_packet('', server, address_ip_client, None, nickname, seq_num, 0)
-                            print('', server, address_ip_client, None, nickname, seq_num, 0)
+                            send_packet("", client, 9999, client_ip, nickname, seq_num, 0)
 
                         
                         # resetando a lista de fragmentos
@@ -159,7 +157,10 @@ def receive():
                             rec_list = []
 
                 else: # Caso seja pacote de reconhecimento, irá conferir ack number
+                    #if c.TESTING == True:
+                    #    checksum = 32325453535339
                     if checksum != checksum_check or ack_num != current_seq_num: # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
+                        c.TESTING = False
                         if checksum != checksum_check:
                             print(f"Houve corrupção no pacote!")
                         # Reenviar o último pacote enviado
