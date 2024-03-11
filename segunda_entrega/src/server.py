@@ -38,7 +38,7 @@ def remove_client(client):
 
 # Função para receber mensagens dos clientes
 def receive():
-    global finalization_ack
+    global finalization_ack, last_sent_pkt
 
     # Numero de fragmentos recebidos
     received_chunks = 0
@@ -96,23 +96,17 @@ def receive():
                     print(f'Recebeu ACK do FYN-ACK enviado!')
                     finalization_ack = True
                 elif decoded_message: # Caso exista mensagem para ser enviada a usuários, irá conferir checksum e sequence number
-                    if checksum != checksum_check or seq_num != current_ack_num: 
+                    if checksum != checksum_check or seq_num != current_ack_num and frag_kkk == False: 
                         if checksum != checksum_check:
                             print("Houve corrupção no pacote!")
-
                         print(f'Enviando ACK do último pacote recebido!')
                         if current_ack_num == 0:
                             send_packet('', server, address_ip_client, None, nickname, seq_num, 1)
-                            print('-----------------------')
                             print('', server, address_ip_client, None, nickname, seq_num, 1)
-                            print('-----------------------')
                         else:
                             send_packet('', server, address_ip_client, None, nickname, seq_num, 0)
-                            print('-----------------------')
                             print('', server, address_ip_client, None, nickname, seq_num, 0)
-                            print('-----------------------')
 
-                        
                         
                         # resetando a lista de fragmentos
                         received_chunks = 0
@@ -125,6 +119,7 @@ def receive():
                         else:
                             print(f'Enviando ACK!')
                             send_packet('', server, address_ip_client, None, nickname, seq_num, current_ack_num)
+                            last_sent_pkt = ('', server, address_ip_client, None, nickname, seq_num, current_ack_num)
                             print('', server, address_ip_client, None, nickname, seq_num, current_ack_num)
 
                         # Atualiza próximo ack a ser enviado
@@ -132,9 +127,6 @@ def receive():
                             seq_and_ack_controler[index][1] = 1
                         else:
                             seq_and_ack_controler[index][1] = 0
-                        
-                        # guardar o último pacote enviado
-                        last_sent_pkt = (decoded_message, address_ip_client, nickname, seq_num, current_ack_num)
                         
                         # Adiciona fragCount posições vazias na lista de fragmentos recebidos
                         # Serve para salvar os fragmentos na ordem correta
@@ -167,17 +159,14 @@ def receive():
                             rec_list = []
 
                 else: # Caso seja pacote de reconhecimento, irá conferir ack number
-                    if c.TESTING == True:
-                        checksum = 3234424444465677
-                        c.TESTING = False
                     if checksum != checksum_check or ack_num != current_seq_num: # Reenvia último pacote (DICA: guardar último pacote enviado em uma variável até recber ack do mesmo)
                         if checksum != checksum_check:
                             print(f"Houve corrupção no pacote!")
-                            c.TESTING = False
                         # Reenviar o último pacote enviado
                         if last_sent_pkt:
                             print(f'Reenviando último pacote...')
                             send_packet(*last_sent_pkt)
+
                     
                     else: # Recebe ack do pacote recebido e atualiza próximo número de sequência a ser enviado
                         c.ACK_RECEIVED = True # Afirma que recebeu ack
@@ -190,7 +179,7 @@ def receive():
 
 # Função para transmitir mensagens a todos os clientes
 def broadcast():
-    global finalization_ack
+    global finalization_ack, last_sent_pkt
     
     while True:
         while not messages.empty(): # Caso exista mensagens na fila
@@ -231,6 +220,7 @@ def broadcast():
 
                         print(f'Enviando mensagem do usuário {nickname} para cliente {name}!')
                         send_packet(message_output, server, client_ip, None, name, current_seq_num, current_ack_num)
+                        last_sent_pkt = (message_output, server, client_ip, None, name, current_seq_num, current_ack_num)
 
                         # mensagem chegou, apagar pastas
                         if nickname:
