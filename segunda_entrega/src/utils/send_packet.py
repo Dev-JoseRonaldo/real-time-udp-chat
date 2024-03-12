@@ -62,7 +62,7 @@ def send_packet(message, sender, destination_address, origin_adress=None, nickna
                     c.ACK_RECEIVED = False # Reseta status do ack
                     contents = contents[fragSize:] # Remove o fragmento enviado do conteúdo
                     fragIndex += 1 # Incrementa o índice do fragmento
-                else:
-                    break
+                #else:
+                    #break
                 
                 fragment_sent = True # Reestabele status 'True' para fazer nova conferência
