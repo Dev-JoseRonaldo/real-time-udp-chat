@@ -5,7 +5,7 @@ import threading # Cria threads, que são úteis para executar operações simul
 import struct # Bilioteca que Interpreta bytes como dados binários compactados
 from zlib import crc32 # Calcula uma soma de verificação CRC 32 bits
 
-from utils.convert_txt import convert_string_to_txt
+from utils.ack_received_control import AckReceivedControl
 from utils.send_packet import send_packet
 import utils.constants as c
 from utils.get_current_time_and_date import get_current_time_and_date
@@ -25,6 +25,7 @@ server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind(c.SERVER_ADRR)
 
 finalization_ack = False # Avisa se ack de finalização foi recebido
+ack_received_control = AckReceivedControl()
 
 #Função responsável por remover um client de clients_ip e clients_nickname
 def remove_client(client): 
@@ -70,6 +71,7 @@ def receive():
         else:
             if address_ip_client not in clients_ip:
                 nickname = decoded_message.split("eh ")[1]
+                ack_received_control.update_ack_received(None, nickname, False)
                 clients_ip.append(address_ip_client)
                 clients_nickname.append(nickname)
                 seq_and_ack_controler.append([0, 0])
@@ -153,7 +155,7 @@ def receive():
                         if checksum != checksum_check:
                             print(f"Houve corrupção no pacote!")
                     else: # Recebe ack do pacote recebido e atualiza próximo número de sequência a ser enviado
-                        c.ACK_RECEIVED = True # Afirma que recebeu ack
+                        ack_received_control.update_ack_received(None, nickname, True) # Afirma que recebeu ack
                         print(f'Recebeu ACK do pacote!')
 
                         if current_seq_num == 0:
@@ -209,13 +211,14 @@ def broadcast():
                         if nickname:
                             delete_folder("./segunda_entrega/data", nickname, True)
 
-                except Exception as e:
+                except Exception as e: # Reenvia pacote
                     print(f"Erro ao enviar mensagem: {e}")
 
             if decoded_message == "bye":
                 while not finalization_ack:
                     pass
                 remove_client(address_ip_client)
+                ack_received_control.remove_ack_received(None, nickname)
                 print(f'Removeu {nickname} da lista de usuários conectados!')
                 finalization_ack = False
 
